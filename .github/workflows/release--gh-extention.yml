@@ -11,6 +11,8 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    # enable after repository setup is done.
+    if: false
     steps:
       - id: release
         uses: googleapis/release-please-action@v4
