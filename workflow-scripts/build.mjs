@@ -9,13 +9,13 @@ export const buildMatrix = {
       target_host: "x86_64-unknown-linux-musl",
       binary_suffix: "-linux-amd64",
       runner: "ubuntu-latest",
-      use_cross: true,
+      use_cross: false,
     },
     {
       target_host: "aarch64-unknown-linux-musl",
       binary_suffix: "-linux-arm64",
-      runner: "ubuntu-latest",
-      use_cross: true,
+      runner: "ubuntu-24.04-arm",
+      use_cross: false,
     },
   ],
 };
