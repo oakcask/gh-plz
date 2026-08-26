@@ -1,0 +1,116 @@
+name: release / gh extension
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/release--gh-extension.yaml
+      - Cargo.lock
+      - Cargo.toml
+      - crates/**/Cargo.toml
+      - crates/**/*.rs
+      - rust-toolchain.toml
+      - workflow-scripts/build.mjs
+      - workflow-scripts/build.test.mjs
+  pull_request:
+    paths:
+      - .github/workflows/release--gh-extension.yaml
+      - Cargo.lock
+      - Cargo.toml
+      - crates/**/Cargo.toml
+      - crates/**/*.rs
+      - rust-toolchain.toml
+      - workflow-scripts/build.mjs
+      - workflow-scripts/build.test.mjs
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      sha: ${{ steps.release.outputs.sha || github.sha }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+    steps:
+      - id: release
+        if: github.event_name == 'push'
+        uses: googleapis/release-please-action@v4
+        with:
+          release-type: rust
+          include-component-in-tag: false
+
+  plan-builds:
+    needs: release
+    if: github.event_name == 'pull_request' || needs.release.outputs.release_created == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          ref: ${{ needs.release.outputs.sha }}
+      - name: Plan release builds
+        id: plan
+        run: node workflow-scripts/build.mjs matrix
+      - name: Test release build planning and validation
+        run: node --test workflow-scripts/build.test.mjs
+
+  build:
+    needs:
+      - release
+      - plan-builds
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan-builds.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          ref: ${{ needs.release.outputs.sha }}
+      - name: Set up cross-compilation toolchain
+        uses: taiki-e/setup-cross-toolchain-action@12b7ad4acfa95a1476779d6c06699b96ec1691f8 # v1
+        with:
+          target: ${{ matrix.target_host }}
+          runner: none
+      - name: Build release binary
+        run: cargo build --locked --release --package gh-plz --target "${TARGET_HOST}"
+        env:
+          TARGET_HOST: ${{ matrix.target_host }}
+      - name: Prepare release binary
+        run: |
+          mkdir -p dist
+          cp "target/${TARGET_HOST}/release/gh-plz" "dist/gh-plz${BINARY_SUFFIX}"
+          chmod +x "dist/gh-plz${BINARY_SUFFIX}"
+        env:
+          BINARY_SUFFIX: ${{ matrix.binary_suffix }}
+          TARGET_HOST: ${{ matrix.target_host }}
+      - name: Upload release binary
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: gh-plz${{ matrix.binary_suffix }}
+          path: dist/gh-plz${{ matrix.binary_suffix }}
+          if-no-files-found: error
+
+  publish:
+    needs:
+      - release
+      - build
+    if: github.event_name == 'push' && needs.release.outputs.release_created == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          ref: ${{ needs.release.outputs.sha }}
+      - name: Download release binaries
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          pattern: gh-plz-*
+          path: dist
+          merge-multiple: true
+      - uses: cli/gh-extension-precompile@v2
+        with:
+          release_tag: ${{ needs.release.outputs.tag_name }}
+          build_script_override: "workflow-scripts/build.mjs"
