@@ -1,0 +1,6 @@
+[package]
+name = "gh-plz"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]

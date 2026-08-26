@@ -1,0 +1,49 @@
+name: lint / rust
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/lint--rust.yaml
+      - .cargo/config.toml
+      - .github/actions/cargo-dependencies/action.yaml
+      - .github/actions/clippy/action.yaml
+      - Cargo.lock
+      - Cargo.toml
+      - crates/**/Cargo.toml
+      - crates/**/*.rs
+  pull_request:
+    paths:
+      - .github/workflows/lint--rust.yaml
+      - .cargo/config.toml
+      - .github/actions/cargo-dependencies/action.yaml
+      - .github/actions/clippy/action.yaml
+      - Cargo.lock
+      - Cargo.toml
+      - crates/**/Cargo.toml
+      - crates/**/*.rs
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+
+jobs:
+  rustfmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - name: Install rustfmt
+        run: rustup component add rustfmt
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+  clippy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - name: Check Clippy lints
+        uses: ./.github/actions/clippy
