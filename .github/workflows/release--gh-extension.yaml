@@ -70,23 +70,12 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
         with:
           ref: ${{ needs.release.outputs.sha }}
-      - name: Install cross
-        if: matrix.use_cross
-        uses: taiki-e/install-action@43aecc8d72668fbcfe75c31400bc4f890f1c5853 # v2
+      - name: Set up cross-compilation toolchain
+        uses: taiki-e/setup-cross-toolchain-action@12b7ad4acfa95a1476779d6c06699b96ec1691f8 # v1
         with:
-          tool: cross@0.2.5
-      - name: Build release binary with cross
-        if: matrix.use_cross
-        run: cross build --locked --release --package gh-plz --target "${TARGET_HOST}"
-        env:
-          TARGET_HOST: ${{ matrix.target_host }}
-      - name: Install native Rust target
-        if: ${{ !matrix.use_cross }}
-        run: rustup target add "${TARGET_HOST}"
-        env:
-          TARGET_HOST: ${{ matrix.target_host }}
-      - name: Build native release binary
-        if: ${{ !matrix.use_cross }}
+          target: ${{ matrix.target_host }}
+          runner: none
+      - name: Build release binary
         run: cargo build --locked --release --package gh-plz --target "${TARGET_HOST}"
         env:
           TARGET_HOST: ${{ matrix.target_host }}
