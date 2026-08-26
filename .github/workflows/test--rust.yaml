@@ -37,8 +37,8 @@ env:
   NEXTEST_VERSION: "0.9.140"
   # Keep test execution near twice the clean-build cost so extra shards still repay their build overhead.
   NEXTEST_TARGET_SECONDS: "90"
-  NEXTEST_FALLBACK_SHARDS: "4"
-  NEXTEST_MAX_SHARDS: "16"
+  NEXTEST_FALLBACK_SHARDS: "1"
+  NEXTEST_MAX_SHARDS: "4"
 
 jobs:
   plan-test-shards:
