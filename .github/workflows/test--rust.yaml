@@ -91,5 +91,22 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Prepare Cargo dependencies
         uses: ./.github/actions/cargo-dependencies
+      - name: Detect Rust doctests
+        id: doctests
+        shell: bash
+        run: |
+          cargo metadata --locked --format-version 1 --no-deps > cargo-metadata.json
+          node <<'NODE'
+          const fs = require("node:fs");
+
+          const metadata = JSON.parse(fs.readFileSync("cargo-metadata.json", "utf8"));
+          const workspaceMembers = new Set(metadata.workspace_members);
+          const hasDocTests = metadata.packages
+            .filter((pkg) => workspaceMembers.has(pkg.id))
+            .some((pkg) => pkg.targets.some((target) => target.doctest));
+
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `has_doc_tests=${hasDocTests}\n`);
+          NODE
       - name: Run Rust doctests
+        if: steps.doctests.outputs.has_doc_tests == 'true'
         run: cargo test --locked --workspace --doc
