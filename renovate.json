@@ -8,7 +8,8 @@
   ],
   "internalChecksFilter": "strict",
   "platformAutomerge": false,
-  "prCreation": "not-pending",
+  "prBodyColumns": ["Package", "Update", "Change"],
+  "prCreation": "immediate",
   "prConcurrentLimit": 1,
   "packageRules": [
     {
