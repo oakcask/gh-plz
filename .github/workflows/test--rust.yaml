@@ -47,7 +47,7 @@ jobs:
       shard_count: ${{ steps.plan.outputs.shard_count }}
       shards: ${{ steps.plan.outputs.shards }}
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Plan Rust test shards
         id: plan
         env:
@@ -61,7 +61,7 @@ jobs:
       group: rust-test-main-cache
       cancel-in-progress: false
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Seed Rust test caches
         uses: ./.github/actions/nextest
         with:
@@ -77,7 +77,7 @@ jobs:
       matrix:
         shard: ${{ fromJSON(needs.plan-test-shards.outputs.shards) }}
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Run Rust tests
         uses: ./.github/actions/nextest
         with:
@@ -88,8 +88,25 @@ jobs:
   doc-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Prepare Cargo dependencies
         uses: ./.github/actions/cargo-dependencies
+      - name: Detect Rust doctests
+        id: doctests
+        shell: bash
+        run: |
+          cargo metadata --locked --format-version 1 --no-deps > cargo-metadata.json
+          node <<'NODE'
+          const fs = require("node:fs");
+
+          const metadata = JSON.parse(fs.readFileSync("cargo-metadata.json", "utf8"));
+          const workspaceMembers = new Set(metadata.workspace_members);
+          const hasDocTests = metadata.packages
+            .filter((pkg) => workspaceMembers.has(pkg.id))
+            .some((pkg) => pkg.targets.some((target) => target.doctest));
+
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `has_doc_tests=${hasDocTests}\n`);
+          NODE
       - name: Run Rust doctests
+        if: steps.doctests.outputs.has_doc_tests == 'true'
         run: cargo test --locked --workspace --doc
