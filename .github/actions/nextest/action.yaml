@@ -49,7 +49,7 @@ runs:
           rust-test-build-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml', 'Cargo.lock') }}-
           rust-test-build-${{ runner.os }}-
     - name: Install cargo-nextest
-      uses: taiki-e/install-action@43aecc8d72668fbcfe75c31400bc4f890f1c5853 # v2
+      uses: taiki-e/install-action@4076c08d76dba979c11a7285295b0716c1d67908 # v2
       with:
         tool: cargo-nextest@${{ inputs.nextest-version }}
     - name: Save cargo-nextest cache
